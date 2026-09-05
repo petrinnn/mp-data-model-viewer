@@ -1,0 +1,33 @@
+{
+  "name": "data-model-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Viewer/editor local de modelagem de dados via data-model.json (sem conexão com banco)",
+  "type": "module",
+  "bin": {
+    "model-viewer": "./bin/model-viewer.mjs"
+  },
+  "scripts": {
+    "dev": "node bin/model-viewer.mjs --dev",
+    "start": "node bin/model-viewer.mjs",
+    "build": "vite build",
+    "preview": "node bin/model-viewer.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "express": "^4.21.2",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}

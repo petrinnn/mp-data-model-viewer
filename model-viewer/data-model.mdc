@@ -1,0 +1,67 @@
+---
+description: Data model JSON, Viewer e sync com banco (Supabase etc.)
+alwaysApply: true
+---
+
+# Data model do app
+
+Instruções para o agente (Cursor, VS Code, Claude Code, Codex ou outro).  
+Há uma cópia em `data-model.md` na raiz — use-a se a ferramenta não ler esta rule.
+
+## Papéis
+
+- `data-model.json` (raiz do app) = contrato da modelagem
+- pasta `model-viewer/` = atalho local pro Viewer
+- **Data Model Viewer** (`setup/` no PC) = só visualiza/edita o JSON (nunca conecta no banco; 100% local)
+- Agente = gera/atualiza o JSON, importa schema, compara com banco, cria migrations
+
+## Abrir o diagrama
+
+Se o usuário pedir pra ver a modelagem / abrir o viewer:
+
+```bash
+npm run model
+```
+
+Se o script ainda não existir:
+
+```bash
+node model-viewer
+```
+
+(isso prepara o app e abre o Viewer)
+
+Se falhar dizendo que o Data Model Viewer não foi aberto neste PC, oriente: abrir 1x o `Abrir.command` (Mac) ou `Abrir.bat` (Windows) na pasta do pacote (ao lado de `setup/`).
+
+## Fluxo A — app ainda sem modelagem
+
+1. Conversar requisitos (tabelas, campos, relações)
+2. Criar/atualizar `data-model.json` na raiz
+3. Se pedirem ver: rodar `npm run model` ou `node model-viewer`
+
+## Fluxo B — já existe banco (ex.: Supabase)
+
+1. Consultar o schema real (MCP Supabase/Postgres, migrations, etc. — o que o projeto já tiver)
+2. Escrever/atualizar `data-model.json` espelhando o banco (IDs estáveis `tbl_…`, `col_…`)
+3. Abrir o Viewer se pedirem
+4. Usuário edita no Viewer → JSON muda (intenção nova)
+5. Quando pedirem aplicar: **comparar JSON × schema do banco**
+6. Mostrar o diff em linguagem clara e propor/criar migrations
+7. Só então alterar o banco — nunca o Viewer
+
+## Fluxo C — validar modelagem editada no Viewer
+
+Se o usuário disser que mexeu no Viewer e pergunta se faz sentido / se pode aplicar:
+
+1. Ler o `data-model.json` atual
+2. Se houver banco/MCP: comparar com o schema atual
+3. Explicar o que mudou (tabelas/campos/tipos/rels a criar, alterar, remover)
+4. Pedir confirmação antes de migrations destrutivas (drop column/table, rename, change type)
+
+## Regras fixas
+
+- Única fonte de modelagem do Viewer: `data-model.json` na raiz
+- Nunca peça credenciais pro Viewer; nunca conecte o Viewer no banco
+- O Viewer não envia nem recebe dados externos — só o JSON local
+- Formato: `version`, `name`, `tables[]`, `relationships[]`, `view`
+- Tipos comuns: uuid, text, int, boolean, timestamptz, jsonb, numeric

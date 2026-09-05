@@ -1,0 +1,6 @@
+{
+  "name": "model-viewer-kit",
+  "private": true,
+  "type": "module",
+  "main": "./run.mjs"
+}

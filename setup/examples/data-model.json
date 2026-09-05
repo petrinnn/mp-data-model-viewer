@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "name": "Exemplo CRM",
+  "tables": [
+    {
+      "id": "tbl_users",
+      "name": "users",
+      "description": "Usuários",
+      "position": { "x": 80, "y": 120 },
+      "columns": [
+        {
+          "id": "col_users_id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true,
+          "nullable": false,
+          "unique": true,
+          "description": ""
+        },
+        {
+          "id": "col_users_email",
+          "name": "email",
+          "type": "text",
+          "pk": false,
+          "nullable": false,
+          "unique": true,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "id": "tbl_orders",
+      "name": "orders",
+      "description": "Pedidos",
+      "position": { "x": 420, "y": 120 },
+      "columns": [
+        {
+          "id": "col_orders_id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true,
+          "nullable": false,
+          "unique": true,
+          "description": ""
+        },
+        {
+          "id": "col_orders_user_id",
+          "name": "user_id",
+          "type": "uuid",
+          "pk": false,
+          "nullable": false,
+          "unique": false,
+          "description": "FK users.id"
+        },
+        {
+          "id": "col_orders_total",
+          "name": "total",
+          "type": "numeric",
+          "pk": false,
+          "nullable": false,
+          "unique": false,
+          "description": ""
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rel_orders_user",
+      "type": "N:1",
+      "fromTable": "tbl_orders",
+      "fromColumn": "col_orders_user_id",
+      "toTable": "tbl_users",
+      "toColumn": "col_users_id"
+    }
+  ],
+  "view": { "panX": 0, "panY": 0, "zoom": 1 }
+}

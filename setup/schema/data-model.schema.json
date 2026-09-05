@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local/data-model.schema.json",
+  "title": "DataModel",
+  "type": "object",
+  "required": ["version", "name", "tables", "relationships"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "name": { "type": "string" },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "columns", "position"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "position": {
+            "type": "object",
+            "required": ["x", "y"],
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "type"],
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "pk": { "type": "boolean" },
+                "nullable": { "type": "boolean" },
+                "unique": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "fromTable", "fromColumn", "toTable", "toColumn"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "fromTable": { "type": "string" },
+          "fromColumn": { "type": "string" },
+          "toTable": { "type": "string" },
+          "toColumn": { "type": "string" }
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "properties": {
+        "panX": { "type": "number" },
+        "panY": { "type": "number" },
+        "zoom": { "type": "number" }
+      }
+    }
+  }
+}
