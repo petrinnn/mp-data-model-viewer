@@ -43,6 +43,31 @@ export async function readModelFile(file) {
   return normalizeModel(JSON.parse(raw));
 }
 
+/** data-model.json → data-model.baseline.json (mesmo diretório). */
+export function baselinePathFor(modelFile) {
+  const dir = path.dirname(modelFile);
+  const base = path.basename(modelFile);
+  if (/^data-model\.json$/i.test(base)) {
+    return path.join(dir, "data-model.baseline.json");
+  }
+  return path.join(dir, base.replace(/\.json$/i, ".baseline.json"));
+}
+
+export async function readBaselineFile(modelFile) {
+  const file = baselinePathFor(modelFile);
+  try {
+    await fs.access(file);
+  } catch {
+    return { file, model: null };
+  }
+  try {
+    const model = await readModelFile(file);
+    return { file, model };
+  } catch {
+    return { file, model: null };
+  }
+}
+
 export async function writeModelFile(file, data) {
   const normalized = normalizeModel(data);
   await fs.writeFile(file, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");

@@ -81,13 +81,19 @@ O Viewer **não** fala com o banco sozinho.
 
 Se o projeto já tiver **MCP** (ou o agente tiver acesso ao schema), peça:
 
-> Leia as tabelas do Supabase e monte o `data-model.json` na estrutura das instruções.
+> Leia as tabelas do Supabase e monte o `data-model.json` (e o `data-model.baseline.json` se for comparar depois).
+
+### Ampliar um app que já tem banco
+
+1. Agente grava **`data-model.baseline.json`** = foto do que já existe  
+2. Você / agente evolui o **`data-model.json`** = o que quer  
+3. No Viewer, com os dois arquivos na raiz, o **diff** marca: nova / alterada / removida  
 
 ---
 
 ## 5) Do diagrama para o banco
 
-> Crie o schema no Supabase conforme o `data-model.json`.
+> Crie o schema no Supabase conforme o `data-model.json` (diff em relação ao baseline).
 
 Quem aplica migration é o **agente**. O Viewer só mostra o contrato.
 
@@ -97,4 +103,4 @@ Quem aplica migration é o **agente**. O Viewer só mostra o contrato.
 
 - Roda **local**, no seu PC  
 - **Não envia** e **não recebe** dados de serviços externos  
-- Olha só o `data-model.json` e desenha os relacionamentos  
+- Olha o `data-model.json` (e o baseline, se existir) e desenha os relacionamentos  

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchModel, openModelFile, saveModel, subscribeModelEvents } from "./api";
 import { Canvas } from "./components/Canvas";
+import { diffModels, emptyDiff } from "./modelDiff";
 import {
   createEmptyColumn,
   createEmptyTable,
@@ -21,6 +22,7 @@ const REL_TYPES = ["1:N", "N:1", "1:1", "N:N"] as const;
 
 export function App() {
   const [model, setModel] = useState<DataModel | null>(null);
+  const [baseline, setBaseline] = useState<DataModel | null>(null);
   const [path, setPath] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "needs-open" | "error">(
     "loading",
@@ -31,17 +33,24 @@ export function App() {
   const [opening, setOpening] = useState(false);
   const [externalFlash, setExternalFlash] = useState(false);
   const [selection, setSelection] = useState<Selection>(null);
+  const [compareOn, setCompareOn] = useState(true);
   const savedRef = useRef("");
 
   function snapshot(m: DataModel) {
     return JSON.stringify(m);
   }
 
-  function markClean(m: DataModel) {
+  function markClean(m: DataModel, nextBaseline?: DataModel | null) {
     savedRef.current = snapshot(m);
     setModel(m);
+    if (nextBaseline !== undefined) setBaseline(nextBaseline);
     setDirty(false);
   }
+
+  const diff = useMemo(() => {
+    if (!model || !compareOn || !baseline) return emptyDiff();
+    return diffModels(model, baseline);
+  }, [model, baseline, compareOn]);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,13 +60,14 @@ export function App() {
         if (cancelled) return;
         if (!data.model || data.needsOpen) {
           setModel(null);
+          setBaseline(null);
           setPath("");
           savedRef.current = "";
           setDirty(false);
           setStatus("needs-open");
           return;
         }
-        markClean(data.model);
+        markClean(data.model, data.baseline ?? null);
         setPath(data.path || "");
         setStatus("ready");
       } catch (err) {
@@ -73,9 +83,9 @@ export function App() {
 
   useEffect(() => {
     return subscribeModelEvents({
-      onChanged: (next, source, nextPath) => {
+      onChanged: (next, source, nextPath, nextBaseline) => {
         if (nextPath) setPath(nextPath);
-        markClean(next);
+        markClean(next, nextBaseline ?? null);
         setStatus("ready");
         if (source === "external") {
           setExternalFlash(true);
@@ -84,6 +94,7 @@ export function App() {
       },
       onClosed: () => {
         setModel(null);
+        setBaseline(null);
         setPath("");
         savedRef.current = "";
         setDirty(false);
@@ -109,7 +120,7 @@ export function App() {
     try {
       const data = await openModelFile();
       if (data.cancelled) return;
-      markClean(data.model);
+      markClean(data.model, data.baseline ?? null);
       setPath(data.path);
       setStatus("ready");
     } catch (err) {
@@ -125,7 +136,7 @@ export function App() {
     setError("");
     try {
       const saved = await saveModel(model);
-      markClean(saved);
+      markClean(saved.model, saved.baseline);
       if (!path) {
         const data = await fetchModel();
         if (data.path) setPath(data.path);
@@ -437,6 +448,21 @@ export function App() {
               />
             </svg>
           </button>
+          {baseline ? (
+            <>
+              <span className="tool-sep" aria-hidden>
+                |
+              </span>
+              <button
+                type="button"
+                className={`btn compact ${compareOn ? "active-soft" : ""}`}
+                title="Comparar com data-model.baseline.json (banco)"
+                onClick={() => setCompareOn((v) => !v)}
+              >
+                Diff {compareOn ? "on" : "off"}
+              </button>
+            </>
+          ) : null}
         </div>
 
         <div className="topbar-right">
@@ -474,6 +500,8 @@ export function App() {
           model={model}
           selection={selection}
           edgeStyle={model.view.edgeStyle === "straight" ? "straight" : "curve"}
+          diff={diff}
+          compareOn={Boolean(baseline && compareOn)}
           onSelect={setSelection}
           onMoveTable={moveTable}
           onUpdateTable={updateTable}
@@ -492,9 +520,21 @@ export function App() {
       {externalFlash ? (
         <div className="toast">Atualizado do disco</div>
       ) : null}
+      {baseline && compareOn ? (
+        <div className="toast diff-legend" aria-live="polite">
+          Baseline ativo ·{" "}
+          <span className="lg-new">nova {diff.counts.new}</span>
+          {" · "}
+          <span className="lg-changed">alterada {diff.counts.changed}</span>
+          {" · "}
+          <span className="lg-removed">removida {diff.counts.removed}</span>
+        </div>
+      ) : null}
       <footer className="hint">
-        Arraste ○ dos dois lados · duplo clique no nome da tabela pra editar · linhas
-        curvas/retas no meio do header · Cmd/Ctrl+S salva
+        {baseline
+          ? "Diff usa data-model.baseline.json (banco) × data-model.json (alvo) · "
+          : "Sem baseline — peça ao agente um data-model.baseline.json do banco · "}
+        Arraste ○ · duplo clique no nome · Cmd/Ctrl+S salva
       </footer>
     </div>
   );

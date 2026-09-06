@@ -2,6 +2,7 @@ import type { DataModel } from "./types";
 
 export async function fetchModel(): Promise<{
   model: DataModel | null;
+  baseline: DataModel | null;
   path: string | null;
   needsOpen?: boolean;
 }> {
@@ -10,7 +11,10 @@ export async function fetchModel(): Promise<{
   return res.json();
 }
 
-export async function saveModel(model: DataModel): Promise<DataModel> {
+export async function saveModel(model: DataModel): Promise<{
+  model: DataModel;
+  baseline: DataModel | null;
+}> {
   const res = await fetch("/api/model", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -18,11 +22,12 @@ export async function saveModel(model: DataModel): Promise<DataModel> {
   });
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
-  return data.model as DataModel;
+  return { model: data.model as DataModel, baseline: data.baseline ?? null };
 }
 
 export async function openModelFile(path?: string): Promise<{
   model: DataModel;
+  baseline: DataModel | null;
   path: string;
   cancelled?: boolean;
 }> {
@@ -33,14 +38,20 @@ export async function openModelFile(path?: string): Promise<{
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (data?.cancelled) return { cancelled: true, model: null as never, path: "" };
+    if (data?.cancelled)
+      return { cancelled: true, model: null as never, baseline: null, path: "" };
     throw new Error(data?.error || (await res.text()));
   }
   return data;
 }
 
 export function subscribeModelEvents(handlers: {
-  onChanged: (model: DataModel, source: string, path?: string) => void;
+  onChanged: (
+    model: DataModel,
+    source: string,
+    path?: string,
+    baseline?: DataModel | null,
+  ) => void;
   onClosed?: () => void;
   onError?: (msg: string) => void;
 }) {
@@ -48,7 +59,12 @@ export function subscribeModelEvents(handlers: {
   es.addEventListener("model-changed", (ev) => {
     try {
       const data = JSON.parse((ev as MessageEvent).data);
-      handlers.onChanged(data.model, data.source || "external", data.path);
+      handlers.onChanged(
+        data.model,
+        data.source || "external",
+        data.path,
+        data.baseline ?? null,
+      );
     } catch {
       /* ignore */
     }

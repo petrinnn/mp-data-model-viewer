@@ -7,7 +7,9 @@ import path from "node:path";
 import { createServer } from "node:http";
 import chokidar from "chokidar";
 import {
+  baselinePathFor,
   pickJsonFile,
+  readBaselineFile,
   readModelFile,
   writeModelFile,
 } from "./model-io.mjs";
@@ -35,22 +37,34 @@ function broadcast(event, data) {
   }
 }
 
+async function loadPair(file) {
+  const model = await readModelFile(file);
+  const { model: baseline } = await readBaselineFile(file);
+  return { model, baseline };
+}
+
 async function attachWatcher(file) {
   if (watcher) {
     await watcher.close();
     watcher = null;
   }
   if (!file) return;
-  watcher = chokidar.watch(file, {
+  const baseline = baselinePathFor(file);
+  watcher = chokidar.watch([file, baseline], {
     ignoreInitial: true,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
   });
-  watcher.on("change", async () => {
+  watcher.on("all", async () => {
     if (Date.now() < ignoreWatchUntil) return;
     if (!currentFile) return;
     try {
-      const model = await readModelFile(currentFile);
-      broadcast("model-changed", { model, path: currentFile, source: "external" });
+      const { model, baseline } = await loadPair(currentFile);
+      broadcast("model-changed", {
+        model,
+        baseline,
+        path: currentFile,
+        source: "external",
+      });
     } catch (err) {
       broadcast("model-error", { error: String(err?.message || err) });
     }
@@ -69,11 +83,11 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/model", async (_req, res) => {
   try {
     if (!currentFile) {
-      res.json({ model: null, path: null, needsOpen: true });
+      res.json({ model: null, baseline: null, path: null, needsOpen: true });
       return;
     }
-    const model = await readModelFile(currentFile);
-    res.json({ model, path: currentFile, needsOpen: false });
+    const { model, baseline } = await loadPair(currentFile);
+    res.json({ model, baseline, path: currentFile, needsOpen: false });
   } catch (err) {
     res.status(500).json({ error: String(err?.message || err) });
   }
@@ -87,7 +101,8 @@ app.put("/api/model", async (req, res) => {
     }
     ignoreWatchUntil = Date.now() + 800;
     const model = await writeModelFile(currentFile, req.body?.model ?? req.body);
-    res.json({ ok: true, model, path: currentFile });
+    const { model: baseline } = await readBaselineFile(currentFile);
+    res.json({ ok: true, model, baseline, path: currentFile });
   } catch (err) {
     res.status(500).json({ error: String(err?.message || err) });
   }
@@ -103,11 +118,11 @@ app.post("/api/open", async (req, res) => {
       res.status(400).json({ error: "Nenhum arquivo selecionado.", cancelled: true });
       return;
     }
-    const model = await readModelFile(file);
+    const { model, baseline } = await loadPair(file);
     currentFile = file;
     await attachWatcher(file);
-    broadcast("model-changed", { model, path: file, source: "open" });
-    res.json({ ok: true, model, path: file });
+    broadcast("model-changed", { model, baseline, path: file, source: "open" });
+    res.json({ ok: true, model, baseline, path: file });
   } catch (err) {
     const msg = String(err?.message || err);
     if (/User canceled|cancelou|-128/i.test(msg)) {

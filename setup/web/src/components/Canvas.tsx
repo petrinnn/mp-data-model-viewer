@@ -4,6 +4,7 @@ import { TableCard } from "./TableCard";
 import { RelSvg } from "./RelSvg";
 import type { ColumnDef, TableDef } from "../types";
 import { tableColor } from "../tableColor";
+import { type ModelDiff } from "../modelDiff";
 
 type Selection =
   | { kind: "table"; tableId: string }
@@ -37,6 +38,8 @@ type Props = {
   model: DataModel;
   selection: Selection;
   edgeStyle: "curve" | "straight";
+  diff: ModelDiff;
+  compareOn: boolean;
   onSelect: (s: Selection) => void;
   onMoveTable: (tableId: string, x: number, y: number) => void;
   onUpdateTable: (tableId: string, patch: Partial<TableDef>) => void;
@@ -72,6 +75,8 @@ export function Canvas({
   model,
   selection,
   edgeStyle,
+  diff,
+  compareOn,
   onSelect,
   onMoveTable,
   onUpdateTable,
@@ -278,6 +283,7 @@ export function Canvas({
           selection={selection}
           edgeStyle={edgeStyle}
           tableEls={tableEls.current}
+          relDiff={compareOn ? diff.relationships : null}
           dragPreview={
             relDrag
               ? { from: relDrag.from, to: relDrag.to, color: relDrag.color }
@@ -287,52 +293,95 @@ export function Canvas({
           onCycleRelType={onCycleRelType}
           onRemoveRel={onRemoveRelationship}
         />
-        {model.tables.map((table) => (
-          <TableCard
-            key={table.id}
-            table={table}
-            accentColor={tableColor(
-              table.id,
-              model.tables.map((t) => t.id),
-            )}
-            selected={
-              selection?.kind === "table"
-                ? selection.tableId === table.id
-                : selection?.kind === "column"
+        {model.tables.map((table) => {
+          return (
+            <TableCard
+              key={table.id}
+              table={table}
+              accentColor={tableColor(
+                table.id,
+                model.tables.map((t) => t.id),
+              )}
+              selected={
+                selection?.kind === "table"
                   ? selection.tableId === table.id
-                  : false
-            }
-            selectedColumnId={
-              selection?.kind === "column" && selection.tableId === table.id
-                ? selection.columnId
-                : null
-            }
-            relDraftFrom={
-              relDrag
-                ? { tableId: relDrag.fromTable, columnId: relDrag.fromColumn }
-                : null
-            }
-            relHoverTarget={relHover}
-            registerEl={(el) => {
-              if (el) tableEls.current.set(table.id, el);
-              else tableEls.current.delete(table.id);
-            }}
-            onSelectTable={() => onSelect({ kind: "table", tableId: table.id })}
-            onSelectColumn={(columnId) =>
-              onSelect({ kind: "column", tableId: table.id, columnId })
-            }
-            onMove={(x, y) => onMoveTable(table.id, x, y)}
-            onUpdateTable={(patch) => onUpdateTable(table.id, patch)}
-            onRemoveTable={() => onRemoveTable(table.id)}
-            onAddColumn={() => onAddColumn(table.id)}
-            onUpdateColumn={(columnId, patch) =>
-              onUpdateColumn(table.id, columnId, patch)
-            }
-            onRemoveColumn={(columnId) => onRemoveColumn(table.id, columnId)}
-            onRelDragStart={onRelDragStart}
-            onRelDrop={() => {}}
-          />
-        ))}
+                  : selection?.kind === "column"
+                    ? selection.tableId === table.id
+                    : false
+              }
+              selectedColumnId={
+                selection?.kind === "column" && selection.tableId === table.id
+                  ? selection.columnId
+                  : null
+              }
+              tableDiff={compareOn ? diff.tables.get(table.id) || "same" : null}
+              columnDiff={
+                compareOn
+                  ? Object.fromEntries(
+                      [...diff.columns.entries()]
+                        .filter(([k]) => k.startsWith(`${table.id}::`))
+                        .map(([k, v]) => [k.slice(table.id.length + 2), v]),
+                    )
+                  : null
+              }
+              removedColumns={
+                compareOn ? diff.removedColumns.get(table.id) || [] : []
+              }
+              relDraftFrom={
+                relDrag
+                  ? { tableId: relDrag.fromTable, columnId: relDrag.fromColumn }
+                  : null
+              }
+              relHoverTarget={relHover}
+              registerEl={(el) => {
+                if (el) tableEls.current.set(table.id, el);
+                else tableEls.current.delete(table.id);
+              }}
+              onSelectTable={() => onSelect({ kind: "table", tableId: table.id })}
+              onSelectColumn={(columnId) =>
+                onSelect({ kind: "column", tableId: table.id, columnId })
+              }
+              onMove={(x, y) => onMoveTable(table.id, x, y)}
+              onUpdateTable={(patch) => onUpdateTable(table.id, patch)}
+              onRemoveTable={() => onRemoveTable(table.id)}
+              onAddColumn={() => onAddColumn(table.id)}
+              onUpdateColumn={(columnId, patch) =>
+                onUpdateColumn(table.id, columnId, patch)
+              }
+              onRemoveColumn={(columnId) => onRemoveColumn(table.id, columnId)}
+              onRelDragStart={onRelDragStart}
+              onRelDrop={() => {}}
+            />
+          );
+        })}
+        {compareOn
+          ? diff.removedTables.map((table) => (
+              <TableCard
+                key={`removed-${table.id}`}
+                table={table}
+                accentColor="#f97066"
+                selected={false}
+                selectedColumnId={null}
+                tableDiff="removed"
+                columnDiff={null}
+                removedColumns={[]}
+                ghost
+                relDraftFrom={null}
+                relHoverTarget={null}
+                registerEl={() => {}}
+                onSelectTable={() => {}}
+                onSelectColumn={() => {}}
+                onMove={() => {}}
+                onUpdateTable={() => {}}
+                onRemoveTable={() => {}}
+                onAddColumn={() => {}}
+                onUpdateColumn={() => {}}
+                onRemoveColumn={() => {}}
+                onRelDragStart={() => {}}
+                onRelDrop={() => {}}
+              />
+            ))
+          : null}
       </div>
     </div>
   );

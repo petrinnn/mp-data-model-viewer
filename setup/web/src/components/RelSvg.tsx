@@ -23,6 +23,7 @@ type Props = {
   onRemoveRel: (relId: string) => void;
   tableEls: Map<string, HTMLElement>;
   dragPreview: DragPreview;
+  relDiff?: Map<string, import("../modelDiff").DiffKind> | null;
 };
 
 function anchor(
@@ -165,6 +166,7 @@ export function RelSvg({
   onRemoveRel,
   tableEls,
   dragPreview,
+  relDiff = null,
 }: Props) {
   const tableIds = model.tables.map((t) => t.id);
   const colorByTable = new Map(
@@ -194,6 +196,7 @@ export function RelSvg({
         linkedTableId &&
           (rel.fromTable === linkedTableId || rel.toTable === linkedTableId),
       );
+      const rDiff = relDiff?.get(rel.id) || null;
       const cExit = colorByTable.get(exitTable) || "#a78bfa";
       const cEnter = colorByTable.get(enterTable) || "#a78bfa";
       const gradId = `rel-grad-${rel.id}`;
@@ -210,6 +213,7 @@ export function RelSvg({
             "rel",
             selected ? "selected" : "",
             tableLinked ? "table-linked" : "",
+            rDiff && rDiff !== "same" ? `diff-${rDiff}` : "",
           ]
             .filter(Boolean)
             .join(" ")}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { COLUMN_TYPES, type ColumnDef, type TableDef } from "../types";
+import type { DiffKind } from "../modelDiff";
 
 type Props = {
   table: TableDef;
@@ -24,6 +25,10 @@ type Props = {
   ) => void;
   onRelDrop: (tableId: string, columnId: string) => void;
   accentColor: string;
+  tableDiff?: DiffKind | null;
+  columnDiff?: Record<string, DiffKind> | null;
+  removedColumns?: ColumnDef[];
+  ghost?: boolean;
 };
 
 export function TableCard({
@@ -44,6 +49,10 @@ export function TableCard({
   onRelDragStart,
   onRelDrop,
   accentColor,
+  tableDiff = null,
+  columnDiff = null,
+  removedColumns = [],
+  ghost = false,
 }: Props) {
   const drag = useRef<{
     ox: number;
@@ -145,6 +154,7 @@ export function TableCard({
   }, []);
 
   function onHeaderDown(e: React.PointerEvent) {
+    if (ghost) return;
     if (e.button !== 0) return;
     if (editingName) return;
     if ((e.target as HTMLElement).closest("input,.icon-btn,.type-menu")) return;
@@ -183,7 +193,14 @@ export function TableCard({
 
   return (
     <article
-      className={`table-card ${selected ? "selected" : ""}`}
+      className={[
+        "table-card",
+        selected ? "selected" : "",
+        tableDiff === "removed" || ghost ? "diff-removed" : "",
+        ghost ? "ghost" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       style={
         {
           left: table.position.x,
@@ -194,16 +211,26 @@ export function TableCard({
       ref={registerEl}
       data-table-id={table.id}
     >
+      {tableDiff && tableDiff !== "same" ? (
+        <span className={`table-diff-badge ${tableDiff}`}>
+          {tableDiff === "new"
+            ? "nova"
+            : tableDiff === "changed"
+              ? "alterada"
+              : "removida"}
+        </span>
+      ) : null}
       <header
         className="table-card-head"
         onPointerDown={onHeaderDown}
         onDoubleClick={(e) => {
+          if (ghost) return;
           if ((e.target as HTMLElement).closest(".table-name, .table-name-input")) {
             startRename(e);
           }
         }}
       >
-        {editingName ? (
+        {editingName && !ghost ? (
           <input
             ref={nameRef}
             className="inline-edit table-name-input"
@@ -221,15 +248,24 @@ export function TableCard({
         ) : (
           <span
             className="table-name"
-            title="Arraste para mover · dois cliques para renomear"
-            onDoubleClick={startRename}
-            onClick={(e) => {
-              if (e.detail === 2) startRename(e);
-            }}
+            title={
+              ghost
+                ? "Só no baseline (removida do alvo)"
+                : "Arraste para mover · dois cliques para renomear"
+            }
+            onDoubleClick={ghost ? undefined : startRename}
+            onClick={
+              ghost
+                ? undefined
+                : (e) => {
+                    if (e.detail === 2) startRename(e);
+                  }
+            }
           >
             {table.name}
           </span>
         )}
+        {!ghost ? (
         <div className="table-head-actions">
           <button
             type="button"
@@ -256,6 +292,7 @@ export function TableCard({
             ×
           </button>
         </div>
+        ) : null}
       </header>
       <ul className="table-cols">
         {table.columns.map((col) => {
@@ -265,7 +302,8 @@ export function TableCard({
             relHoverTarget?.tableId === table.id &&
             relHoverTarget.columnId === col.id &&
             !isFrom;
-          const waitingTarget = Boolean(relDraftFrom) && !isFrom;
+          const waitingTarget = Boolean(relDraftFrom) && !isFrom && !ghost;
+          const cDiff = columnDiff?.[col.id] || null;
           return (
             <li
               key={col.id}
@@ -275,15 +313,18 @@ export function TableCard({
                 isFrom ? "rel-from" : "",
                 waitingTarget ? "rel-targetable" : "",
                 isDropTarget ? "rel-drop-hover" : "",
+                cDiff && cDiff !== "same" ? `diff-${cDiff}` : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               data-col-id={col.id}
               onClick={(e) => {
+                if (ghost) return;
                 e.stopPropagation();
                 onSelectColumn(col.id);
               }}
               onPointerUp={(e) => {
+                if (ghost) return;
                 if ((e.target as HTMLElement).closest(".rel-handle")) return;
                 onRelDrop(table.id, col.id);
               }}
@@ -366,6 +407,31 @@ export function TableCard({
                         {t}
                       </button>
                     ))}
+                    <label className="type-menu-custom">
+                      <span>outro</span>
+                      <input
+                        className="type-menu-input"
+                        defaultValue={
+                          (COLUMN_TYPES as readonly string[]).includes(col.type)
+                            ? ""
+                            : col.type
+                        }
+                        placeholder="ex: geography(Point)"
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          e.preventDefault();
+                          const v = (e.target as HTMLInputElement).value.trim();
+                          if (!v) return;
+                          onUpdateColumn(col.id, { type: v });
+                          setTypeMenuCol(null);
+                        }}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (!v || v === col.type) return;
+                          onUpdateColumn(col.id, { type: v });
+                        }}
+                      />
+                    </label>
                   </div>
                 ) : null}
               </div>
@@ -407,12 +473,21 @@ export function TableCard({
             </li>
           );
         })}
+        {removedColumns.map((col) => (
+          <li key={`rm-${col.id}`} className="col-row diff-removed" data-col-id={col.id}>
+            <span className="pk-badge">{col.pk ? "PK" : ""}</span>
+            <span className="col-name">{col.name}</span>
+            <span className="col-type">{col.type}</span>
+          </li>
+        ))}
       </ul>
-      <footer className="table-card-foot">
-        <button type="button" className="add-col-btn" onClick={onAddColumn}>
-          + campo
-        </button>
-      </footer>
+      {!ghost ? (
+        <footer className="table-card-foot">
+          <button type="button" className="add-col-btn" onClick={onAddColumn}>
+            + campo
+          </button>
+        </footer>
+      ) : null}
     </article>
   );
 }
