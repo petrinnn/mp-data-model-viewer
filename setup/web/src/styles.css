@@ -610,8 +610,15 @@ body,
 }
 
 .rel.table-linked .rel-line {
-  stroke-width: 3;
-  filter: brightness(1.2);
+  stroke-dasharray: 10 7;
+  stroke-width: 2.85;
+  animation: rel-ants 0.5s linear infinite;
+}
+
+@keyframes rel-ants {
+  to {
+    stroke-dashoffset: -17;
+  }
 }
 
 .rel.preview .rel-line {
