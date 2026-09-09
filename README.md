@@ -34,7 +34,18 @@ Se mover a pasta depois, rode o Abrir de novo.
 
 ## 2) Preparar cada projeto de app (1x por projeto)
 
-1. Copie a pasta **`model-viewer`** para a **raiz** do app em que você está trabalhando.
+**Antes:** o passo 1 precisa ter sido feito neste PC (`Abrir.bat` / `Abrir.command`). Sem isso, `node model-viewer` não encontra o Viewer.
+
+1. Na **raiz** do app, traga a pasta `model-viewer` de um destes jeitos:
+
+   **Opção A — comando (recomendado):**
+
+   ```bash
+   npx degit petrinnn/mp-data-model-viewer/model-viewer model-viewer
+   ```
+
+   **Opção B — copiar à mão:** copie a pasta `model-viewer` deste pacote para a raiz do app.
+
 2. No terminal do projeto, rode **uma vez**:
 
 ```bash
