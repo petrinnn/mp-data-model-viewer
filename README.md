@@ -17,13 +17,15 @@ Funciona com **Cursor, VS Code, Claude Code, Codex** e qualquer agente que leia 
 
 ## 1) Instalar no PC (1x)
 
-1. Salve esta pasta inteira num local **fix** (que você não vai ficar movendo), por exemplo:
+**Pré-requisito:** [Node.js LTS](https://nodejs.org) instalado (uma vez no PC).
+
+1. Salve esta pasta inteira num local **fixo** (que você não vai ficar movendo), por exemplo:
    - Windows: `C:\Data Model Viewer`
    - Mac: `~/Applications/Data Model Viewer` ou Documentos
 2. Execute o **Abrir** que está **na raiz** (ao lado de `setup/`):
    - Mac: `Abrir.command`
    - Windows: `Abrir.bat`  
-   Isso sobe o viewer e **registra** a pasta `setup/` neste PC.
+   Na 1ª vez ele instala e gera o app sozinho (pode demorar 1–2 min). Depois abre o navegador e registra o Viewer neste PC.
 3. (Opcional) Crie um atalho do Abrir na área de trabalho.
 
 Se mover a pasta depois, rode o Abrir de novo.
